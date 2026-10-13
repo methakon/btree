@@ -321,3 +321,23 @@ func TestSetCopy(t *testing.T) {
 		panic("!")
 	}
 }
+
+func TestSetIterExhaustionStaysExhausted(t *testing.T) {
+	var tr Set[int]
+	const N = 100
+	for i := 0; i < N; i++ {
+		tr.Insert(i)
+	}
+	iter := tr.Iter()
+	iter.First()
+	for iter.Next() {
+	}
+	iter.Last()
+	for iter.Prev() {
+	}
+	for i := 0; i < 10; i++ {
+		if iter.Prev() {
+			t.Fatalf("Set Prev() returned true after exhaustion (call %d)", i+1)
+		}
+	}
+}

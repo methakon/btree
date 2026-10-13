@@ -933,6 +933,8 @@ func (iter *MapIter[K, V]) Seek(key K) bool {
 	if iter.tr == nil {
 		return false
 	}
+	iter.atend = false
+	iter.atstart = false
 	iter.seeked = true
 	iter.stack = iter.stack[:0]
 	if iter.tr.root == nil {
@@ -986,6 +988,8 @@ func (iter *MapIter[K, V]) Last() bool {
 	if iter.tr == nil {
 		return false
 	}
+	iter.atend = false
+	iter.atstart = false
 	iter.seeked = true
 	iter.stack = iter.stack[:0]
 	if iter.tr.root == nil {

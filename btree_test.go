@@ -316,3 +316,26 @@ func TestSeek(t *testing.T) {
 		panic("!")
 	}
 }
+
+// BTree.Iter and Set.Iter delegate to IterG and MapIter, so the same defect
+// reaches all four public iterator types.
+func TestIterExhaustionStaysExhausted(t *testing.T) {
+	lt := func(a, b interface{}) bool { return a.(int) < b.(int) }
+	tr := New(lt)
+	const N = 100
+	for i := 0; i < N; i++ {
+		tr.Load(i)
+	}
+	iter := tr.Iter()
+	iter.First()
+	for iter.Next() {
+	}
+	iter.Last()
+	for iter.Prev() {
+	}
+	for i := 0; i < 10; i++ {
+		if iter.Prev() {
+			t.Fatalf("BTree Prev() returned true after exhaustion (call %d)", i+1)
+		}
+	}
+}

@@ -1982,3 +1982,59 @@ func TestBenchmarkIteratorReuseWorks(t *testing.T) {
 		reusableIter.Release()
 	}
 }
+
+// First() is the only repositioning method that clears both flags, and Next()
+// and Prev() read them to decide whether to restart from the opposite end. A
+// reposition through Last() or the seek path therefore carries a stale flag, and
+// an iterator that has already been exhausted in that direction resumes from the
+// wrong end instead of staying exhausted.
+func TestIterGExhaustionStaysExhausted(t *testing.T) {
+	tr := testNewBTree()
+	const N = 100
+	for i := 0; i < N; i++ {
+		tr.Load(testMakeItem(i))
+	}
+
+	// Exhaust forwards (sets atend), reposition through Last(), then exhaust
+	// backwards. Prev() must stay false: atend was cleared by Last(), so there
+	// is no restart to trigger.
+	iter := tr.Iter()
+	if !iter.First() {
+		t.Fatal("First() returned false on a non-empty tree")
+	}
+	for iter.Next() {
+	}
+	if !iter.Last() {
+		t.Fatal("Last() returned false on a non-empty tree")
+	}
+	for iter.Prev() {
+	}
+	for i := 0; i < 10; i++ {
+		if iter.Prev() {
+			t.Fatalf("Prev() returned true after the iterator was exhausted "+
+				"backwards (call %d)", i+1)
+		}
+	}
+	iter.Release()
+
+	// Mirror image: exhaust backwards (sets atstart), reposition through
+	// Seek(), then exhaust forwards. Next() must stay false.
+	iter = tr.Iter()
+	if !iter.First() {
+		t.Fatal("First() returned false on a non-empty tree")
+	}
+	for iter.Prev() {
+	}
+	if !iter.Seek(testMakeItem(N / 2)) {
+		t.Fatal("Seek() returned false for a key that is in the tree")
+	}
+	for iter.Next() {
+	}
+	for i := 0; i < 10; i++ {
+		if iter.Next() {
+			t.Fatalf("Next() returned true after the iterator was exhausted "+
+				"forwards (call %d)", i+1)
+		}
+	}
+	iter.Release()
+}

@@ -1484,3 +1484,49 @@ func TestMapDeepCopy(t *testing.T) {
 	assert(count1 == Ncols*Nvals/2)
 	assert(count2 == Ncols*Nvals/2)
 }
+
+func TestMapIterExhaustionStaysExhausted(t *testing.T) {
+	tr := testMapNewBTree()
+	const N = 100
+	for i := 0; i < N; i++ {
+		tr.Load(testMapMakeItem(i), testMapMakeItem(i))
+	}
+
+	// Last() then exhaust backwards.
+	iter := tr.Iter()
+	if !iter.First() {
+		t.Fatal("First() returned false on a non-empty map")
+	}
+	for iter.Next() {
+	}
+	if !iter.Last() {
+		t.Fatal("Last() returned false on a non-empty map")
+	}
+	for iter.Prev() {
+	}
+	for i := 0; i < 10; i++ {
+		if iter.Prev() {
+			t.Fatalf("Prev() returned true after the map iterator was exhausted "+
+				"backwards (call %d)", i+1)
+		}
+	}
+
+	// Seek() then exhaust forwards.
+	iter = tr.Iter()
+	if !iter.First() {
+		t.Fatal("First() returned false on a non-empty map")
+	}
+	for iter.Prev() {
+	}
+	if !iter.Seek(testMapMakeItem(N / 2)) {
+		t.Fatal("Seek() returned false for a key that is in the map")
+	}
+	for iter.Next() {
+	}
+	for i := 0; i < 10; i++ {
+		if iter.Next() {
+			t.Fatalf("Next() returned true after the map iterator was exhausted "+
+				"forwards (call %d)", i+1)
+		}
+	}
+}
